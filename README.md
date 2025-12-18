@@ -1,67 +1,64 @@
-Blinkit Clone - E-commerce React Application
-Overview
+# Blinkit Clone - E-commerce React Application
+
+## Overview
+
 A fully functional e-commerce web application inspired by Blinkit, built with React.js. This application replicates the core shopping experience with product browsing, cart management, checkout process, and order tracking.
 
-<img width="1901" height="938" alt="image" src="https://github.com/user-attachments/assets/91bb36f8-8a07-4798-a9dc-6fd455940747" />
+## Screenshot
+<img width="1863" height="946" alt="image" src="https://github.com/user-attachments/assets/d252b843-cfa0-428b-b2f3-73480a8a2b0d" />
 
+---
 
-Features
-Shopping Experience
-Product Catalog: Browse through various categories including Dairy, Bakery, Snacks, Vegetables, and Staples
+## Features
 
-Advanced Search: Search products by name with real-time filtering
+### Shopping Experience
 
-Smart Filters: Filter by price range and product categories
+* **Product Catalog**: Browse through various categories including Dairy, Bakery, Snacks, Vegetables, and Staples
+* **Advanced Search**: Search products by name with real-time filtering
+* **Smart Filters**: Filter by price range and product categories
+* **Sorting Options**: Sort products by price (low to high/high to low), name, availability, and popularity
+* **Shopping Cart**: Add/remove items with persistent storage using localStorage
+* **Checkout Process**: Complete order placement with coupon application
+* **Order History**: View past orders with status tracking
+* **User Profile**: Manage personal information and delivery addresses
 
-Sorting Options: Sort products by price (low to high/high to low), name, availability, and popularity
+### User Interface
 
-Shopping Cart: Add/remove items with persistent storage using localStorage
+* **Responsive Design**: Fully responsive layout that works on mobile, tablet, and desktop
+* **Modern Interface**: Clean, intuitive design with smooth animations
+* **Real-time Updates**: Instant cart updates and price calculations
+* **Theme Consistency**: Blinkit-inspired green color theme throughout the application
 
-Checkout Process: Complete order placement with coupon application
+### Technical Features
 
-Order History: View past orders with status tracking
+* **State Management**: Custom hooks for cart and user data management
+* **Local Storage**: Persistent data storage for cart, orders, and user profile
+* **Component Architecture**: Modular, reusable component structure
+* **Error Handling**: Graceful error handling and fallback UI
+* **Performance Optimized**: Efficient rendering and state updates
 
-User Profile: Manage personal information and delivery addresses
+---
 
-User Interface
-Responsive Design: Fully responsive layout that works on mobile, tablet, and desktop
+## Tech Stack
 
-Modern Interface: Clean, intuitive design with smooth animations
+### Frontend
 
-Real-time Updates: Instant cart updates and price calculations
+* React 18: Frontend library with latest features
+* React Router DOM: Client-side routing and navigation
+* Vite: Build tool and development server
+* CSS-in-JS: Component-level styling with inline styles
 
-Theme Consistency: Blinkit-inspired green color theme throughout the application
+### Development Tools
 
-Technical Features
-State Management: Custom hooks for cart and user data management
+* Git: Version control
+* GitHub: Code hosting and collaboration
+* VS Code: Development environment
 
-Local Storage: Persistent data storage for cart, orders, and user profile
+---
 
-Component Architecture: Modular, reusable component structure
+## Project Structure
 
-Error Handling: Graceful error handling and fallback UI
-
-Performance Optimized: Efficient rendering and state updates
-
-Tech Stack
-Frontend
-React 18: Frontend library with latest features
-
-React Router DOM: Client-side routing and navigation
-
-Vite: Build tool and development server
-
-CSS-in-JS: Component-level styling with inline styles
-
-Development Tools
-Git: Version control
-
-GitHub: Code hosting and collaboration
-
-VS Code: Development environment
-
-Project Structure
-text
+```text
 blinkit-clone/
 ├── public/                           # Static assets
 │   ├── Logo.png                      # Application logo
@@ -112,39 +109,55 @@ blinkit-clone/
 ├── vite.config.js                    # Vite configuration
 ├── .gitignore                        # Git ignore rules
 └── README.md                         # This file
-Installation and Setup
-Prerequisites
-Node.js (version 14 or higher)
+```
 
-npm (version 6 or higher) or yarn
+---
 
-Git
+## Installation and Setup
 
-Step-by-Step Installation
-Clone the repository
+### Prerequisites
 
-bash
+* Node.js (version 14 or higher)
+* npm (version 6 or higher) or yarn
+* Git
+
+### Step-by-Step Installation
+
+#### Clone the repository
+
+```bash
 git clone https://github.com/your-username/blinkit-clone.git
 cd blinkit-clone
-Install dependencies
+```
 
-bash
+#### Install dependencies
+
+```bash
 npm install
-Run the development server
+```
 
-bash
+#### Run the development server
+
+```bash
 npm run dev
-Build for production
+```
 
-bash
+#### Build for production
+
+```bash
 npm run build
-Preview production build
+```
 
-bash
+#### Preview production build
+
+```bash
 npm run preview
-Available Scripts
-npm run dev - Start development server on http://localhost:5173
+```
 
-npm run build - Build the application for production
+---
 
-npm run preview - Preview the production build locally
+## Available Scripts
+
+* `npm run dev` - Start development server on [http://localhost:5173](http://localhost:5173)
+* `npm run build` - Build the application for production
+* `npm run preview` - Preview the production build locally
