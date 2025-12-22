@@ -33,11 +33,5 @@
     "@babel/preset-env": "^7.23.5",
     "@babel/preset-react": "^7.23.3",
     "identity-obj-proxy": "^3.0.0"
-  },
-
-  "jest": {
-    "moduleNameMapper": {
-      "\\.(css|less|scss|sass)$": "identity-obj-proxy"
-    }
   }
 }
