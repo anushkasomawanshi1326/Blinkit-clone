@@ -12,6 +12,7 @@ module.exports = {
   testMatch: ["**/?(*.)+(test).[jt]s?(x)"],
 
   moduleNameMapper: {
+    "\\.(css|less|scss|sass)$": "identity-obj-proxy",  
     "^@/(.*)$": "<rootDir>/src/$1",
     "^@components/(.*)$": "<rootDir>/src/components/$1",
   },
