@@ -30,21 +30,5 @@
     "babel-jest": "^29.7.0",
     "@babel/preset-env": "^7.23.5",
     "@babel/preset-react": "^7.23.3"
-  },
-
-  "jest": {
-    "testEnvironment": "jsdom",
-
-    "transform": {
-      "^.+\\.(js|jsx)$": "babel-jest"
-    },
-
-    "moduleNameMapper": {
-      "^@components/(.*)$": "<rootDir>/src/components/$1"
-    },
-
-    "setupFilesAfterEnv": [
-      "@testing-library/jest-dom"
-    ]
   }
 }
