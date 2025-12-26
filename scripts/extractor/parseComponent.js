@@ -70,7 +70,7 @@ export function parseComponent(filePath) {
     file: filePath,
     componentName: path.basename(filePath).replace(/\.(jsx|js)$/, ""),
     imports,
-    hooks: extractHooks(sourceCode),
+    hooks: extractHooks(sourceCode),       // ✅ Named export usage
     jsxSignals: extractJSXSignals(sourceCode),
     relatedFiles
   };
