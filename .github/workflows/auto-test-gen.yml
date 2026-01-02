@@ -511,7 +511,17 @@ jobs:
           echo "files=$FILES" >> $GITHUB_OUTPUT
 
       # =====================================================
-      # 4️⃣ Validate UTG prompt exists (FROM EXTRACTION WORKFLOW)
+      # 🔽 NEW: Download UTG prompt artifact (FROM EXTRACTION WORKFLOW)
+      # =====================================================
+      - name: Download UTG prompt artifact
+        if: steps.changed-files.outputs.files != ''
+        uses: actions/download-artifact@v3
+        with:
+          name: utg-prompt
+          path: context
+
+      # =====================================================
+      # 4️⃣ Validate UTG prompt exists
       # =====================================================
       - name: Validate UTG prompt
         if: steps.changed-files.outputs.files != ''
