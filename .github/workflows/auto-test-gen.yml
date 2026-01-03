@@ -493,7 +493,7 @@ jobs:
           fetch-depth: 0
 
       # =====================================================
-      # STEP 2 — Setup Node.js (React + extractor)
+      # STEP 2 — Setup Node.js
       # =====================================================
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -504,7 +504,7 @@ jobs:
         run: npm install --legacy-peer-deps
 
       # =====================================================
-      # STEP 3 — Detect ALL changed JSX/TSX files
+      # STEP 3 — Detect changed JSX/TSX files
       # =====================================================
       - name: Detect changed React files
         id: changed-files
@@ -522,7 +522,7 @@ jobs:
           echo "$FILES"
 
       # =====================================================
-      # STEP 4 — Run React Context Extraction
+      # STEP 4 — Run React Context Extraction (existing logic)
       # =====================================================
       - name: Run React context extraction
         if: steps.changed-files.outputs.files != ''
@@ -530,35 +530,70 @@ jobs:
           echo "🚀 Starting React Context Extraction Pipeline"
           mkdir -p context
           node scripts/extractor/index.js
-          echo "✅ UTG prompt generated"
+          echo "✅ Base UTG prompt generated"
 
       # =====================================================
-      # STEP 5 — Append FULL SOURCE CODE to UTG Prompt (FIXED)
+      # STEP 5 — Append FULL SOURCE CODE (Using EXISTING Resolver)
       # =====================================================
-      - name: Append full source code to UTG prompt
+      - name: Append dependency-aware source code to UTG prompt
         if: steps.changed-files.outputs.files != ''
         run: |
-          PROMPT_FILE="context/utg-prompt.txt"
-          FILE_LIST="context/changed-files.txt"
+          node <<'EOF'
+          import fs from "fs";
+          import path from "path";
+          import { resolveDependencies } from "./scripts/extractor/dependencyResolver.js";
 
-          echo "📄 Writing changed files list"
-          echo "${{ steps.changed-files.outputs.files }}" > "$FILE_LIST"
+          const changedFiles = `${{ steps.changed-files.outputs.files }}`
+            .split("\n")
+            .map(f => f.trim())
+            .filter(Boolean);
 
-          echo "" >> "$PROMPT_FILE"
-          echo "====================================" >> "$PROMPT_FILE"
-          echo "📦 FULL SOURCE CODE CONTEXT" >> "$PROMPT_FILE"
-          echo "====================================" >> "$PROMPT_FILE"
+          const promptFile = "context/utg-prompt.txt";
 
-          while IFS= read -r file; do
-            if [ -f "$file" ]; then
-              echo "" >> "$PROMPT_FILE"
-              echo "------------------------------------" >> "$PROMPT_FILE"
-              echo "📄 FILE: $file" >> "$PROMPT_FILE"
-              echo "------------------------------------" >> "$PROMPT_FILE"
-              cat "$file" >> "$PROMPT_FILE"
-              echo "" >> "$PROMPT_FILE"
-            fi
-          done < "$FILE_LIST"
+          fs.appendFileSync(
+            promptFile,
+            `
+====================================
+📦 FULL SOURCE CODE CONTEXT
+====================================
+`
+          );
+
+          const added = new Set();
+
+          for (const file of changedFiles) {
+            const absPath = path.resolve(file);
+            const deps = resolveDependencies(absPath);
+
+            for (const dep of deps) {
+              if (added.has(dep)) continue;
+              added.add(dep);
+
+              fs.appendFileSync(
+                promptFile,
+                `
+------------------------------------
+📄 FILE: ${dep}
+------------------------------------
+${fs.readFileSync(dep, "utf8")}
+`
+              );
+            }
+          }
+          EOF
+
+      # =====================================================
+      # STEP 5.1 — FAIL FAST if changed file missing
+      # =====================================================
+      - name: Ensure UTG is testing changed files
+        if: steps.changed-files.outputs.files != ''
+        run: |
+          for file in ${{ steps.changed-files.outputs.files }}; do
+            base=$(basename "$file")
+            grep -q "$base" context/utg-prompt.txt \
+              || (echo "❌ Changed file $base missing from UTG prompt" && exit 1)
+          done
+          echo "✅ All changed files present in UTG prompt"
 
       # =====================================================
       # STEP 6 — Validate UTG Prompt
@@ -609,24 +644,24 @@ jobs:
           pip install -r utg/requirements.txt
 
       # =====================================================
-      # STEP 10 — Run UTG (LLM Test Generation)
+      # STEP 10 — Run UTG
       # =====================================================
       - name: Generate tests using UTG
         if: steps.changed-files.outputs.files != ''
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
-          echo "🤖 Running UTG with full context"
+          echo "🤖 Running UTG with dependency-aware context"
           python utg/scripts/pr_test_generator.py utg/context/utg-prompt.txt
 
       # =====================================================
-      # STEP 11 — Run React Tests with Coverage
+      # STEP 11 — Run React Tests
       # =====================================================
       - name: Run React tests
         run: npm test -- --coverage
 
       # =====================================================
-      # STEP 12 — Commit Generated Tests Back to PR
+      # STEP 12 — Commit Generated Tests
       # =====================================================
       - name: Commit generated tests
         run: |
