@@ -461,7 +461,8 @@
 #               body: comment
 #             });
 
-name: Auto Test Generation
+
+name: Auto Test Generation (React + UTG)
 
 on:
   pull_request:
@@ -483,7 +484,7 @@ jobs:
       # 1️⃣ Checkout React project
       # =====================================================
       - name: Checkout React project
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -491,15 +492,15 @@ jobs:
       # 2️⃣ Setup Node
       # =====================================================
       - name: Set up Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: '18'
 
-      - name: Install npm dependencies
+      - name: Install React dependencies
         run: npm install --legacy-peer-deps
 
       # =====================================================
-      # 3️⃣ Detect changed components (TRIGGER ONLY)
+      # 3️⃣ Detect changed React files
       # =====================================================
       - name: Get changed files
         id: changed-files
@@ -510,62 +511,64 @@ jobs:
           echo "files=$FILES" >> $GITHUB_OUTPUT
 
       # =====================================================
-      # 4️⃣ Download UTG Prompt Artifact (FIXED)
+      # 4️⃣ Extract components + generate UTG prompt
+      # (YOUR EXISTING EXTRACTION LOGIC)
       # =====================================================
-      - name: Download UTG prompt artifact
+      - name: Generate UTG prompt
         if: steps.changed-files.outputs.files != ''
-        uses: actions/download-artifact@v4
-        with:
-          name: utg-prompt
-          path: context
+        run: |
+          mkdir -p context
+          node scripts/extractor/index.js
+          echo "✅ utg-prompt.txt generated"
 
       # =====================================================
-      # 5️⃣ Validate UTG prompt exists
+      # 5️⃣ Validate UTG prompt
       # =====================================================
       - name: Validate UTG prompt
         if: steps.changed-files.outputs.files != ''
         run: |
           if [ ! -f "context/utg-prompt.txt" ]; then
-            echo "❌ UTG prompt not found."
+            echo "❌ utg-prompt.txt not found"
             exit 1
           fi
-          echo "✅ UTG prompt found"
+          echo "✅ UTG prompt exists"
 
       # =====================================================
       # 6️⃣ Checkout PRIVATE UTG repo
       # =====================================================
       - name: Checkout UnitTestGenerationSystem (PRIVATE)
         if: steps.changed-files.outputs.files != ''
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: prakalps/UnitTestGenerationSystem
           token: ${{ secrets.GH_TOKEN }}
           path: utg
 
       # =====================================================
-      # 7️⃣ Copy prompt into UTG
+      # 7️⃣ Copy prompt into UTG repo
       # =====================================================
-      - name: Copy UTG prompt into UTG repo
+      - name: Inject prompt into UTG
         if: steps.changed-files.outputs.files != ''
         run: |
           mkdir -p utg/context
           cp context/utg-prompt.txt utg/context/utg-prompt.txt
 
       # =====================================================
-      # 8️⃣ Setup Python
+      # 8️⃣ Setup Python for UTG
       # =====================================================
       - name: Set up Python
         if: steps.changed-files.outputs.files != ''
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.10'
 
       - name: Install UTG dependencies
         if: steps.changed-files.outputs.files != ''
-        run: pip install -r utg/requirements.txt
+        run: |
+          pip install -r utg/requirements.txt
 
       # =====================================================
-      # 9️⃣ Run UTG (PROMPT-DRIVEN)
+      # 9️⃣ Run UTG (LLM-powered test generation)
       # =====================================================
       - name: Generate tests using UTG
         if: steps.changed-files.outputs.files != ''
@@ -575,18 +578,54 @@ jobs:
           python utg/scripts/pr_test_generator.py utg/context/utg-prompt.txt
 
       # =====================================================
-      # 🔟 Run tests
+      # 🔟 Run React tests with coverage
       # =====================================================
-      - name: Run generated tests
+      - name: Run tests
         run: npm test -- --coverage
 
       # =====================================================
-      # 1️⃣1️⃣ Commit generated tests
+      # 1️⃣1️⃣ Commit generated tests back to PR
       # =====================================================
       - name: Commit generated tests
         run: |
-          git config --global user.name 'github-actions[bot]'
-          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git add .
-          git commit -m "chore: add agentic generated tests [skip ci]" || echo "No changes"
+          git commit -m "chore: add UTG generated tests [skip ci]" || echo "No changes"
           git push origin HEAD:${{ github.head_ref }}
+
+      # =====================================================
+      # 1️⃣2️⃣ Comment PR with UTG summary
+      # =====================================================
+      - name: Comment PR with results
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require("fs");
+
+            const path = "src/logs/pr_test_generation.json";
+            if (!fs.existsSync(path)) {
+              console.log("No UTG report found");
+              return;
+            }
+
+            const data = JSON.parse(fs.readFileSync(path, "utf8"));
+
+            const comment = `
+            ## 🤖 UTG Test Generation Report
+
+            **Files Processed:** ${data.filesProcessed ?? "N/A"}
+            **Tests Generated:** ${data.testsGenerated ?? "N/A"}
+            **Tests Passed:** ${data.testsPassed ?? "N/A"} ✅
+
+            **Tokens Used:** ${data.cost_report?.total_tokens ?? "N/A"}
+            **Total Cost:** ${data.cost_report?.total_cost ?? "N/A"}
+            `;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
