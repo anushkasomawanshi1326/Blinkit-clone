@@ -463,7 +463,7 @@
 
 # auto-test-gen.yml file for the better llm context new one after the  PR1 solving 
 
-name: Auto Test Generation (React + UTG)
+name: Auto Test Generation (UTG)
 
 on:
   pull_request:
@@ -471,18 +471,21 @@ on:
       - 'src/**/*.jsx'
       - 'src/**/*.tsx'
 
+# =====================================================
+# REQUIRED PERMISSIONS (PR comments + commits)
+# =====================================================
 permissions:
   contents: write
   pull-requests: write
   issues: write
 
 jobs:
-  generate-tests:
+  auto-test-gen:
     runs-on: ubuntu-latest
 
     steps:
       # =====================================================
-      # 1️⃣ Checkout React project
+      # STEP 1 — Checkout React Repository
       # =====================================================
       - name: Checkout React project
         uses: actions/checkout@v4
@@ -490,7 +493,7 @@ jobs:
           fetch-depth: 0
 
       # =====================================================
-      # 2️⃣ Setup Node.js (React project)
+      # STEP 2 — Setup Node.js (React + extractor)
       # =====================================================
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -501,47 +504,85 @@ jobs:
         run: npm install --legacy-peer-deps
 
       # =====================================================
-      # 3️⃣ Detect changed React component files
-      # (Used only as trigger signal)
+      # STEP 3 — Detect ALL changed JSX/TSX files
+      # (Handles multiple files correctly)
       # =====================================================
-      - name: Detect changed JSX / TSX files
+      - name: Detect changed React files
         id: changed-files
         run: |
+          echo "🔍 Detecting changed files..."
           FILES=$(git diff --name-only \
             ${{ github.event.pull_request.base.sha }} \
             ${{ github.sha }} | grep -E '\.jsx$|\.tsx$' || true)
 
-          FILES_SINGLE_LINE=$(echo "$FILES" | tr '\n' ' ')
-          echo "files=$FILES_SINGLE_LINE" >> $GITHUB_OUTPUT
+          echo "files<<EOF" >> $GITHUB_OUTPUT
+          echo "$FILES" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+          echo "✅ Changed files:"
+          echo "$FILES"
 
       # =====================================================
-      # 4️⃣ Run React extraction + UTG prompt generation
-      # (FULL SOURCE CODE INLINE PROMPT)
+      # STEP 4 — Run React Context Extraction
+      # (Your existing extractor logic)
       # =====================================================
-      - name: Generate UTG prompt (React extraction)
+      - name: Run React context extraction
         if: steps.changed-files.outputs.files != ''
-        env:
-          CHANGED_FILES: ${{ steps.changed-files.outputs.files }}
         run: |
-          echo "🚀 Running React context extraction"
+          echo "🚀 Starting React Context Extraction Pipeline"
           mkdir -p context
-          node scripts/extractor/index.js
-          echo "✅ utg-prompt.txt generated"
+          node scripts/react-context-extractor.js
+          echo "✅ Base UTG prompt created"
 
       # =====================================================
-      # 5️⃣ Validate UTG prompt existence
+      # STEP 5 — Append FULL SOURCE CODE to UTG Prompt (CRITICAL)
+      # THIS is the missing piece earlier
+      # =====================================================
+      - name: Append full source code to UTG prompt
+        if: steps.changed-files.outputs.files != ''
+        run: |
+          PROMPT_FILE="context/utg-prompt.txt"
+
+          echo "" >> $PROMPT_FILE
+          echo "====================================" >> $PROMPT_FILE
+          echo "📦 FULL SOURCE CODE CONTEXT" >> $PROMPT_FILE
+          echo "====================================" >> $PROMPT_FILE
+
+          for file in ${{ steps.changed-files.outputs.files }}; do
+            if [ -f "$file" ]; then
+              echo "" >> $PROMPT_FILE
+              echo "------------------------------------" >> $PROMPT_FILE
+              echo "📄 FILE: $file" >> $PROMPT_FILE
+              echo "------------------------------------" >> $PROMPT_FILE
+
+              # Log to GitHub Actions UI
+              echo "📄 Injecting source of $file"
+
+              # Append FULL file source to prompt
+              cat "$file" >> $PROMPT_FILE
+              echo "" >> $PROMPT_FILE
+            fi
+          done
+
+          echo "✅ Full source code appended to UTG prompt"
+
+      # =====================================================
+      # STEP 6 — Validate UTG Prompt
+      # (Prevents silent failures)
       # =====================================================
       - name: Validate UTG prompt
         if: steps.changed-files.outputs.files != ''
         run: |
           if [ ! -f "context/utg-prompt.txt" ]; then
-            echo "❌ utg-prompt.txt not found"
+            echo "❌ UTG prompt not found"
             exit 1
           fi
-          echo "✅ UTG prompt exists"
+          echo "✅ UTG prompt ready"
+          echo "📄 Prompt size:"
+          wc -l context/utg-prompt.txt
 
       # =====================================================
-      # 6️⃣ Checkout PRIVATE UTG repository
+      # STEP 7 — Checkout PRIVATE UTG Repository (PAT access)
       # =====================================================
       - name: Checkout UnitTestGenerationSystem (PRIVATE)
         if: steps.changed-files.outputs.files != ''
@@ -552,17 +593,17 @@ jobs:
           path: utg
 
       # =====================================================
-      # 7️⃣ Inject UTG prompt into UTG repo
+      # STEP 8 — Inject Prompt into UTG Repo
       # =====================================================
       - name: Inject UTG prompt into UTG repo
         if: steps.changed-files.outputs.files != ''
         run: |
           mkdir -p utg/context
           cp context/utg-prompt.txt utg/context/utg-prompt.txt
-          echo "✅ Prompt injected into UTG"
+          echo "✅ Prompt copied to UTG repo"
 
       # =====================================================
-      # 8️⃣ Setup Python for UTG
+      # STEP 9 — Setup Python for UTG
       # =====================================================
       - name: Set up Python
         if: steps.changed-files.outputs.files != ''
@@ -576,34 +617,36 @@ jobs:
           pip install -r utg/requirements.txt
 
       # =====================================================
-      # 9️⃣ Run UTG (LLM-powered test generation)
+      # STEP 10 — Run UTG (LLM Test Generation)
       # =====================================================
       - name: Generate tests using UTG
         if: steps.changed-files.outputs.files != ''
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
+          echo "🤖 Running UTG with full context"
           python utg/scripts/pr_test_generator.py utg/context/utg-prompt.txt
 
       # =====================================================
-      # 🔟 Run React tests with coverage
+      # STEP 11 — Run React Tests with Coverage
       # =====================================================
       - name: Run React tests
         run: npm test -- --coverage
 
       # =====================================================
-      # 1️⃣1️⃣ Commit generated tests back to PR branch
+      # STEP 12 — Commit Generated Tests Back to PR
       # =====================================================
       - name: Commit generated tests
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
           git add .
           git commit -m "chore: add UTG generated tests [skip ci]" || echo "No changes"
           git push origin HEAD:${{ github.head_ref }}
 
       # =====================================================
-      # 1️⃣2️⃣ Comment PR with UTG summary
+      # STEP 13 — Comment PR with UTG Summary
       # =====================================================
       - name: Comment PR with UTG results
         if: always()
@@ -614,7 +657,7 @@ jobs:
 
             const reportPath = "src/logs/pr_test_generation.json";
             if (!fs.existsSync(reportPath)) {
-              console.log("No UTG report found, skipping PR comment");
+              console.log("No UTG report found");
               return;
             }
 
@@ -627,9 +670,8 @@ jobs:
             **Tests Generated:** ${data.testsGenerated ?? "N/A"}
             **Tests Passed:** ${data.testsPassed ?? "N/A"} ✅
 
-            ### 💰 Cost Report
-            - **Tokens Used:** ${data.cost_report?.total_tokens ?? "N/A"}
-            - **Total Cost:** ${data.cost_report?.total_cost ?? "N/A"}
+            **Total Tokens:** ${data.cost_report?.total_tokens ?? "N/A"}
+            **Total Cost:** ${data.cost_report?.total_cost ?? "N/A"}
             `;
 
             github.rest.issues.createComment({
