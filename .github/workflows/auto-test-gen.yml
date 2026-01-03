@@ -600,7 +600,7 @@ ${fs.readFileSync(dep, "utf8")}
             base=$(basename "$file")
             grep -q "$base" context/utg-prompt.txt \
               || (echo "❌ Missing $base in UTG prompt" && exit 1)
-          done
+            done
 
       # =====================================================
       # STEP 6 — Validate UTG Prompt
@@ -616,7 +616,7 @@ ${fs.readFileSync(dep, "utf8")}
       # =====================================================
       - name: Checkout UTG system
         if: steps.changed-files.outputs.files != ''
-        uses: actions/checkout@v4
+        uses:actions/checkout@v4
         with:
           repository: prakalps/UnitTestGenerationSystem
           token: ${{ secrets.GH_TOKEN }}
@@ -671,7 +671,7 @@ ${fs.readFileSync(dep, "utf8")}
           git push origin HEAD:${{ github.head_ref }}
 
       # =====================================================
-      # STEP 13 — Comment PR with UTG Summary
+      # STEP 13 — Comment PR with UTG Summary (SAFE YAML)
       # =====================================================
       - name: Comment PR with UTG results
         if: always()
@@ -688,16 +688,18 @@ ${fs.readFileSync(dep, "utf8")}
 
             const data = JSON.parse(fs.readFileSync(reportPath, "utf8"));
 
-            const comment = `
-## 🤖 UTG Test Generation Report
+            const lines = [
+              "## 🤖 UTG Test Generation Report",
+              "",
+              `**Files Processed:** ${data.filesProcessed ?? "N/A"}`,
+              `**Tests Generated:** ${data.testsGenerated ?? "N/A"}`,
+              `**Tests Passed:** ${data.testsPassed ?? "N/A"} ✅`,
+              "",
+              `**Total Tokens:** ${data.cost_report?.total_tokens ?? "N/A"}`,
+              `**Total Cost:** ${data.cost_report?.total_cost ?? "N/A"}`
+            ];
 
-**Files Processed:** ${data.filesProcessed ?? "N/A"}
-**Tests Generated:** ${data.testsGenerated ?? "N/A"}
-**Tests Passed:** ${data.testsPassed ?? "N/A"} ✅
-
-**Total Tokens:** ${data.cost_report?.total_tokens ?? "N/A"}
-**Total Cost:** ${data.cost_report?.total_cost ?? "N/A"}
-`;
+            const comment = lines.join("\n");
 
             github.rest.issues.createComment({
               issue_number: context.issue.number,
