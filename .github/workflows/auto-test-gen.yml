@@ -522,7 +522,7 @@ jobs:
           echo "$FILES"
 
       # =====================================================
-      # STEP 4 — Run React Context Extraction (existing logic)
+      # STEP 4 — Run React Context Extraction
       # =====================================================
       - name: Run React context extraction
         if: steps.changed-files.outputs.files != ''
@@ -533,7 +533,7 @@ jobs:
           echo "✅ Base UTG prompt generated"
 
       # =====================================================
-      # STEP 5 — Append FULL SOURCE CODE (Using EXISTING Resolver)
+      # STEP 5 — Append FULL SOURCE CODE (Dependency-aware)
       # =====================================================
       - name: Append dependency-aware source code to UTG prompt
         if: steps.changed-files.outputs.files != ''
@@ -640,8 +640,7 @@ ${fs.readFileSync(dep, "utf8")}
 
       - name: Install UTG dependencies
         if: steps.changed-files.outputs.files != ''
-        run: |
-          pip install -r utg/requirements.txt
+        run: pip install -r utg/requirements.txt
 
       # =====================================================
       # STEP 10 — Run UTG
@@ -651,7 +650,7 @@ ${fs.readFileSync(dep, "utf8")}
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
-          echo "🤖 Running UTG with dependency-aware context"
+          echo "🤖 Running UTG"
           python utg/scripts/pr_test_generator.py utg/context/utg-prompt.txt
 
       # =====================================================
@@ -691,15 +690,15 @@ ${fs.readFileSync(dep, "utf8")}
             const data = JSON.parse(fs.readFileSync(reportPath, "utf8"));
 
             const comment = `
-            ## 🤖 UTG Test Generation Report
+## 🤖 UTG Test Generation Report
 
-            **Files Processed:** ${data.filesProcessed ?? "N/A"}
-            **Tests Generated:** ${data.testsGenerated ?? "N/A"}
-            **Tests Passed:** ${data.testsPassed ?? "N/A"} ✅
+**Files Processed:** ${data.filesProcessed ?? "N/A"}
+**Tests Generated:** ${data.testsGenerated ?? "N/A"}
+**Tests Passed:** ${data.testsPassed ?? "N/A"} ✅
 
-            **Total Tokens:** ${data.cost_report?.total_tokens ?? "N/A"}
-            **Total Cost:** ${data.cost_report?.total_cost ?? "N/A"}
-            `;
+**Total Tokens:** ${data.cost_report?.total_tokens ?? "N/A"}
+**Total Cost:** ${data.cost_report?.total_cost ?? "N/A"}
+`;
 
             github.rest.issues.createComment({
               issue_number: context.issue.number,
