@@ -469,7 +469,7 @@ on:
       - 'src/**/*.jsx'
       - 'src/**/*.tsx'
 
-# ✅ REQUIRED PERMISSIONS (FIXES 403 ERROR)
+# ✅ REQUIRED PERMISSIONS
 permissions:
   contents: write
   pull-requests: write
@@ -500,7 +500,7 @@ jobs:
         run: npm install --legacy-peer-deps
 
       # =====================================================
-      # 3️⃣ Get changed JSX/TSX files (USED AS TRIGGER ONLY)
+      # 3️⃣ Get changed JSX/TSX files (TRIGGER ONLY)
       # =====================================================
       - name: Get changed files
         id: changed-files
@@ -511,11 +511,11 @@ jobs:
           echo "files=$FILES" >> $GITHUB_OUTPUT
 
       # =====================================================
-      # 🔽 NEW: Download UTG prompt artifact (FROM EXTRACTION WORKFLOW)
+      # 🔽 FIXED: Download UTG prompt artifact (v4)
       # =====================================================
       - name: Download UTG prompt artifact
         if: steps.changed-files.outputs.files != ''
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: utg-prompt
           path: context
@@ -568,9 +568,9 @@ jobs:
           pip install -r utg/requirements.txt
 
       # =====================================================
-      # 8️⃣ Run UTG test generation (PROMPT-DRIVEN)
+      # 8️⃣ Run UTG test generation (LLM PROMPT DRIVEN)
       # =====================================================
-      - name: Generate tests using UTG (LLM Prompt Driven)
+      - name: Generate tests using UTG
         if: steps.changed-files.outputs.files != ''
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
@@ -595,7 +595,7 @@ jobs:
           git push origin HEAD:${{ github.head_ref }}
 
       # =====================================================
-      # 1️⃣1️⃣ Comment PR with UTG results (SAFE GUARDED)
+      # 1️⃣1️⃣ Comment PR with UTG results
       # =====================================================
       - name: Comment PR with results
         uses: actions/github-script@v6
