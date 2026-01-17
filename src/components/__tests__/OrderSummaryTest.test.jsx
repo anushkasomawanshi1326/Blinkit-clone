@@ -1,42 +1,48 @@
-import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
-import OrderSummaryTest from '../OrderSummaryTest';
-import { useCart } from '../hooks/useCart';
-import products from '../data/products';
+import React from "react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import OrderSummaryTest from "../OrderSummaryTest";
 
-jest.mock('../hooks/useCart');
+jest.mock("../hooks/useCart", () => ({
+  __esModule: true,
+  useCart: jest.fn(() => ({
+    cartItems: [{ id: 1, name: "Product 1", price: 20 }],
+  })),
+}));
 
-describe('OrderSummaryTest Component', () => {
-  beforeEach(() => {
-    useCart.mockReturnValue({ cartItems: products });
+describe("OrderSummaryTest", () => {
+  it("renders loading skeleton initially", () => {
+    render(<OrderSummaryTest />);
+    
+    expect(screen.getByText("Loading...")).toBeInTheDocument();
   });
 
-  it('renders loading state initially and then displays order summary', () => {
+  it("displays order summary with products and total price after loading", async () => {
     render(<OrderSummaryTest />);
-    expect(screen.getByText('Loading...')).toBeInTheDocument();
-    setTimeout(() => {
-      expect(screen.getByText('🧾 Order Summary')).toBeInTheDocument();
-    }, 500);
+    
+    await waitFor(() => {
+      expect(screen.getByText("🧾 Order Summary")).toBeInTheDocument();
+      expect(screen.getByText("Product 1")).toBeInTheDocument();
+      expect(screen.getByText("Place Order ₹20")).toBeInTheDocument();
+    });
   });
 
-  it('displays products list, cart, coupon, total price, and place order button', () => {
+  it("displays 'No products available' message when no products are present", async () => {
+    jest.spyOn(global, "setTimeout");
+    global.setTimeout.mockImplementation((cb) => cb());
+    
     render(<OrderSummaryTest />);
-    setTimeout(() => {
-      products.forEach((product) => {
-        expect(screen.getByText(product.name)).toBeInTheDocument();
-      });
-      expect(screen.getByText('Cart')).toBeInTheDocument();
-      expect(screen.getByText('Coupon')).toBeInTheDocument();
-      expect(screen.getByText(`Place Order ₹${products.reduce((sum, item) => sum + item.price, 0)}`)).toBeInTheDocument();
-    }, 500);
+    
+    await waitFor(() => {
+      expect(screen.getByText("No products available")).toBeInTheDocument();
+    });
   });
 
-  it('alerts "Order Placed!" when place order button is clicked', () => {
+  it("alerts 'Order Placed!' when 'Place Order' button is clicked", async () => {
     render(<OrderSummaryTest />);
-    setTimeout(() => {
-      const placeOrderButton = screen.getByText(`Place Order ₹${products.reduce((sum, item) => sum + item.price, 0)}`);
-      fireEvent.click(placeOrderButton);
-      expect(window.alert).toHaveBeenCalledWith('Order Placed!');
-    }, 500);
+    
+    global.alert = jest.fn();
+    fireEvent.click(screen.getByText("Place Order ₹20"));
+    
+    expect(global.alert).toHaveBeenCalledWith("Order Placed!");
   });
 });
