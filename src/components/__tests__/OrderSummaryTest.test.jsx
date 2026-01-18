@@ -1,48 +1,45 @@
 import React from "react";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import OrderSummaryTest from "../OrderSummaryTest";
+import { render, screen, fireEvent } from "@testing-library/react";
+import OrderSummaryTest from '../OrderSummaryTest';
 
 jest.mock("../hooks/useCart", () => ({
   __esModule: true,
-  useCart: jest.fn(() => ({
-    cartItems: [{ id: 1, name: "Product 1", price: 20 }],
-  })),
+  useCart: jest.fn(() => ({ cartItems: [{ id: 1, price: 50 }, { id: 2, price: 75 }] })),
 }));
 
-describe("OrderSummaryTest", () => {
-  it("renders loading skeleton initially", () => {
+describe("OrderSummaryTest Component", () => {
+  it("renders loading skeleton while fetching data", () => {
     render(<OrderSummaryTest />);
     
     expect(screen.getByText("Loading...")).toBeInTheDocument();
   });
 
-  it("displays order summary with products and total price after loading", async () => {
+  it("renders order summary with products and total price after loading", async () => {
     render(<OrderSummaryTest />);
     
-    await waitFor(() => {
-      expect(screen.getByText("🧾 Order Summary")).toBeInTheDocument();
-      expect(screen.getByText("Product 1")).toBeInTheDocument();
-      expect(screen.getByText("Place Order ₹20")).toBeInTheDocument();
-    });
+    await screen.findByText("🧾 Order Summary");
+    expect(screen.getByText("Product 1")).toBeInTheDocument();
+    expect(screen.getByText("Product 2")).toBeInTheDocument();
+    expect(screen.getByText("Place Order ₹125")).toBeInTheDocument();
   });
 
-  it("displays 'No products available' message when no products are present", async () => {
-    jest.spyOn(global, "setTimeout");
-    global.setTimeout.mockImplementation((cb) => cb());
+  it("displays 'No products available' message when products array is empty", async () => {
+    jest.mock("../data/products", () => []);
     
     render(<OrderSummaryTest />);
     
-    await waitFor(() => {
-      expect(screen.getByText("No products available")).toBeInTheDocument();
-    });
+    await screen.findByText("No products available");
   });
 
-  it("alerts 'Order Placed!' when 'Place Order' button is clicked", async () => {
+  it("triggers alert when 'Place Order' button is clicked", async () => {
     render(<OrderSummaryTest />);
     
-    global.alert = jest.fn();
-    fireEvent.click(screen.getByText("Place Order ₹20"));
+    const alertMock = jest.spyOn(window, "alert").mockImplementation(() => {});
     
-    expect(global.alert).toHaveBeenCalledWith("Order Placed!");
+    fireEvent.click(screen.getByText("Place Order ₹125"));
+    
+    expect(alertMock).toHaveBeenCalledWith("Order Placed!");
   });
+
+  // Add more test cases as needed
 });
