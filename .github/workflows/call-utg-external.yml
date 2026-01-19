@@ -1,7 +1,155 @@
-# # # 
+# # # # 
 
 
-# # name: React Component Extraction + UTG External Invocation
+# # # name: React Component Extraction + UTG External Invocation
+
+# # # on:
+# # #   pull_request:
+# # #     paths:
+# # #       - "src/**/*.jsx"
+# # #       - "src/**/*.tsx"
+
+# # # permissions:
+# # #   contents: read
+# # #   pull-requests: write
+# # #   actions: read
+
+# # # jobs:
+# # #   extract-and-run-utg:
+# # #     name: Extract React Context and Invoke UTG
+# # #     runs-on: ubuntu-latest
+
+# # #     steps:
+# # #       # =====================================================
+# # #       # STEP 0 — Checkout React Repository
+# # #       # =====================================================
+# # #       - name: Checkout React repository
+# # #         uses: actions/checkout@v4
+# # #         with:
+# # #           fetch-depth: 0
+
+# # #       # =====================================================
+# # #       # STEP 1 — Setup Node Environment (React Repo)
+# # #       # =====================================================
+# # #       - name: Setup Node.js
+# # #         uses: actions/setup-node@v4
+# # #         with:
+# # #           node-version: "18"
+
+# # #       - name: Install React repo dependencies
+# # #         run: npm install --legacy-peer-deps
+
+# # #       # =====================================================
+# # #       # STEP 2 — Detect Changed React Files
+# # #       # =====================================================
+# # #       - name: Detect changed JSX / TSX files
+# # #         id: changed-files
+# # #         run: |
+# # #           echo "🔍 Detecting changed React component files..."
+
+# # #           FILES=$(git diff --name-only \
+# # #             ${{ github.event.pull_request.base.sha }} \
+# # #             ${{ github.sha }} | grep -E '\.jsx$|\.tsx$' || true)
+
+# # #           echo "Changed files detected:"
+# # #           echo "$FILES"
+
+# # #           FILES_SINGLE_LINE=$(echo "$FILES" | tr '\n' ' ')
+# # #           echo "files=$FILES_SINGLE_LINE" >> $GITHUB_OUTPUT
+
+# # #       # =====================================================
+# # #       # STEP 3 — Run React Context Extraction
+# # #       # (Schema + UTG Prompt Generation)
+# # #       # =====================================================
+# # #       - name: Run React context extraction pipeline
+# # #         if: steps.changed-files.outputs.files != ''
+# # #         env:
+# # #           CHANGED_FILES: ${{ steps.changed-files.outputs.files }}
+# # #         run: |
+# # #           echo "🚀 Running React context extraction..."
+# # #           echo "Files under analysis:"
+# # #           echo "$CHANGED_FILES"
+
+# # #           mkdir -p context
+# # #           node scripts/extractor/index.js
+
+# # #       # =====================================================
+# # #       # STEP 4 — Validate Generated Context
+# # #       # =====================================================
+# # #       - name: Validate extraction outputs
+# # #         if: steps.changed-files.outputs.files != ''
+# # #         run: |
+# # #           if [ ! -f "context/react-component-schema.json" ]; then
+# # #             echo "❌ react-component-schema.json not found"
+# # #             exit 1
+# # #           fi
+
+# # #           if [ ! -f "context/utg-prompt.txt" ]; then
+# # #             echo "❌ utg-prompt.txt not found"
+# # #             exit 1
+# # #           fi
+
+# # #           echo "✅ React extraction outputs validated"
+
+# # #       # =====================================================
+# # #       # STEP 5 — Display UTG Prompt (Debug Visibility)
+# # #       # =====================================================
+# # #       - name: Display UTG prompt (LLM context)
+# # #         if: steps.changed-files.outputs.files != ''
+# # #         run: |
+# # #           echo "🤖 UTG Prompt (Preview)"
+# # #           echo "-----------------------------------"
+# # #           head -n 40 context/utg-prompt.txt
+# # #           echo "-----------------------------------"
+
+# # #       # =====================================================
+# # #       # STEP 6 — Checkout UTG Repository (FEATURE BRANCH)
+# # #       # =====================================================
+# # #       - name: Checkout UnitTestGenerationSystem (UTG)
+# # #         uses: actions/checkout@v4
+# # #         with:
+# # #           repository: prakalps/UnitTestGenerationSystem
+# # #           ref: feature/external-prompt-ingestion
+# # #           token: ${{ secrets.GH_TOKEN }}
+# # #           path: utg
+
+# # #       # =====================================================
+# # #       # STEP 7 — Setup Node.js for UTG
+# # #       # =====================================================
+# # #       - name: Setup Node.js (UTG)
+# # #         uses: actions/setup-node@v4
+# # #         with:
+# # #           node-version: "18"
+
+# # #       # =====================================================
+# # #       # STEP 8 — Install UTG Dependencies
+# # #       # =====================================================
+# # #       - name: Install UTG dependencies
+# # #         working-directory: utg
+# # #         run: npm install --legacy-peer-deps
+
+# # #       # =====================================================
+# # #       # STEP 9 — Run UTG in External Prompt Mode
+# # #       # =====================================================
+# # #       - name: Run UTG (external prompt ingestion)
+# # #         if: steps.changed-files.outputs.files != ''
+# # #         working-directory: utg
+# # #         env:
+# # #           UTG_MODE: external_prompt
+# # #           EXTERNAL_PROMPT_PATH: ../context/utg-prompt.txt
+# # #           SOURCE_REPO: ${{ github.repository }}
+# # #           SOURCE_PR_NUMBER: ${{ github.event.pull_request.number }}
+# # #           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+# # #         run: |
+# # #           echo "🚀 Running UTG with external prompt"
+# # #           echo "Prompt path: $EXTERNAL_PROMPT_PATH"
+
+# # #           node src/index.js
+
+
+# # #new version # name: React Component Extraction + UTG External Invocation
+
+# # name: React Component Extraction + UTG Context Generation
 
 # # on:
 # #   pull_request:
@@ -16,14 +164,13 @@
 
 # # jobs:
 # #   extract-and-run-utg:
-# #     name: Extract React Context and Invoke UTG
 # #     runs-on: ubuntu-latest
 
 # #     steps:
 # #       # =====================================================
 # #       # STEP 0 — Checkout React Repository
 # #       # =====================================================
-# #       - name: Checkout React repository
+# #       - name: Checkout repository
 # #         uses: actions/checkout@v4
 # #         with:
 # #           fetch-depth: 0
@@ -40,7 +187,7 @@
 # #         run: npm install --legacy-peer-deps
 
 # #       # =====================================================
-# #       # STEP 2 — Detect Changed React Files
+# #       # STEP 2 — Detect Changed React Component Files
 # #       # =====================================================
 # #       - name: Detect changed JSX / TSX files
 # #         id: changed-files
@@ -58,8 +205,7 @@
 # #           echo "files=$FILES_SINGLE_LINE" >> $GITHUB_OUTPUT
 
 # #       # =====================================================
-# #       # STEP 3 — Run React Context Extraction
-# #       # (Schema + UTG Prompt Generation)
+# #       # STEP 3 — Run React Context Extraction Pipeline
 # #       # =====================================================
 # #       - name: Run React context extraction pipeline
 # #         if: steps.changed-files.outputs.files != ''
@@ -74,11 +220,13 @@
 # #           node scripts/extractor/index.js
 
 # #       # =====================================================
-# #       # STEP 4 — Validate Generated Context
+# #       # STEP 4 — Validate Generated Context Files
 # #       # =====================================================
 # #       - name: Validate extraction outputs
 # #         if: steps.changed-files.outputs.files != ''
 # #         run: |
+# #           echo "🔎 Validating generated context files..."
+
 # #           if [ ! -f "context/react-component-schema.json" ]; then
 # #             echo "❌ react-component-schema.json not found"
 # #             exit 1
@@ -89,7 +237,7 @@
 # #             exit 1
 # #           fi
 
-# #           echo "✅ React extraction outputs validated"
+# #           echo "✅ Context files validated successfully"
 
 # #       # =====================================================
 # #       # STEP 5 — Display UTG Prompt (Debug Visibility)
@@ -97,7 +245,7 @@
 # #       - name: Display UTG prompt (LLM context)
 # #         if: steps.changed-files.outputs.files != ''
 # #         run: |
-# #           echo "🤖 UTG Prompt (Preview)"
+# #           echo "🤖 UTG Prompt Preview"
 # #           echo "-----------------------------------"
 # #           head -n 40 context/utg-prompt.txt
 # #           echo "-----------------------------------"
@@ -105,7 +253,7 @@
 # #       # =====================================================
 # #       # STEP 6 — Checkout UTG Repository (FEATURE BRANCH)
 # #       # =====================================================
-# #       - name: Checkout UnitTestGenerationSystem (UTG)
+# #       - name: Checkout UnitTestGenerationSystem
 # #         uses: actions/checkout@v4
 # #         with:
 # #           repository: prakalps/UnitTestGenerationSystem
@@ -116,7 +264,7 @@
 # #       # =====================================================
 # #       # STEP 7 — Setup Node.js for UTG
 # #       # =====================================================
-# #       - name: Setup Node.js (UTG)
+# #       - name: Setup Node.js for UTG
 # #         uses: actions/setup-node@v4
 # #         with:
 # #           node-version: "18"
@@ -129,10 +277,9 @@
 # #         run: npm install --legacy-peer-deps
 
 # #       # =====================================================
-# #       # STEP 9 — Run UTG in External Prompt Mode
+# #       # STEP 9 — Run UTG in EXTERNAL PROMPT MODE (✅ FIXED)
 # #       # =====================================================
-# #       - name: Run UTG (external prompt ingestion)
-# #         if: steps.changed-files.outputs.files != ''
+# #       - name: Run UTG with external prompt
 # #         working-directory: utg
 # #         env:
 # #           UTG_MODE: external_prompt
@@ -144,174 +291,118 @@
 # #           echo "🚀 Running UTG with external prompt"
 # #           echo "Prompt path: $EXTERNAL_PROMPT_PATH"
 
-# #           node src/index.js
+# #           npm run start
 
 
-# #new version # name: React Component Extraction + UTG External Invocation
-
-# name: React Component Extraction + UTG Context Generation
+# name: Call UTG External
 
 # on:
-#   pull_request:
-#     paths:
-#       - "src/**/*.jsx"
-#       - "src/**/*.tsx"
-
-# permissions:
-#   contents: read
-#   pull-requests: write
-#   actions: read
+#   workflow_dispatch:
 
 # jobs:
-#   extract-and-run-utg:
+#   run-utg:
 #     runs-on: ubuntu-latest
 
 #     steps:
-#       # =====================================================
-#       # STEP 0 — Checkout React Repository
-#       # =====================================================
-#       - name: Checkout repository
+#       # ============================================================
+#       # STEP 1 — Checkout React Repo
+#       # ============================================================
+#       - name: Checkout React repository
 #         uses: actions/checkout@v4
+
+#       # ============================================================
+#       # STEP 2 — Download Prompt Artifact
+#       # ============================================================
+#       - name: Download UTG prompt
+#         uses: actions/download-artifact@v4
 #         with:
-#           fetch-depth: 0
+#           name: utg-prompt
+#           path: context
 
-#       # =====================================================
-#       # STEP 1 — Setup Node Environment (React Repo)
-#       # =====================================================
-#       - name: Setup Node.js
-#         uses: actions/setup-node@v4
-#         with:
-#           node-version: "18"
-
-#       - name: Install React repo dependencies
-#         run: npm install --legacy-peer-deps
-
-#       # =====================================================
-#       # STEP 2 — Detect Changed React Component Files
-#       # =====================================================
-#       - name: Detect changed JSX / TSX files
-#         id: changed-files
+#       # ============================================================
+#       # STEP 3 — Verify Prompt
+#       # ============================================================
+#       - name: Verify prompt file
 #         run: |
-#           echo "🔍 Detecting changed React component files..."
+#           echo "📄 Context contents:"
+#           ls -R context
+#           test -f context/utg-prompt.txt
 
-#           FILES=$(git diff --name-only \
-#             ${{ github.event.pull_request.base.sha }} \
-#             ${{ github.sha }} | grep -E '\.jsx$|\.tsx$' || true)
-
-#           echo "Changed files detected:"
-#           echo "$FILES"
-
-#           FILES_SINGLE_LINE=$(echo "$FILES" | tr '\n' ' ')
-#           echo "files=$FILES_SINGLE_LINE" >> $GITHUB_OUTPUT
-
-#       # =====================================================
-#       # STEP 3 — Run React Context Extraction Pipeline
-#       # =====================================================
-#       - name: Run React context extraction pipeline
-#         if: steps.changed-files.outputs.files != ''
-#         env:
-#           CHANGED_FILES: ${{ steps.changed-files.outputs.files }}
-#         run: |
-#           echo "🚀 Running React context extraction..."
-#           echo "Files under analysis:"
-#           echo "$CHANGED_FILES"
-
-#           mkdir -p context
-#           node scripts/extractor/index.js
-
-#       # =====================================================
-#       # STEP 4 — Validate Generated Context Files
-#       # =====================================================
-#       - name: Validate extraction outputs
-#         if: steps.changed-files.outputs.files != ''
-#         run: |
-#           echo "🔎 Validating generated context files..."
-
-#           if [ ! -f "context/react-component-schema.json" ]; then
-#             echo "❌ react-component-schema.json not found"
-#             exit 1
-#           fi
-
-#           if [ ! -f "context/utg-prompt.txt" ]; then
-#             echo "❌ utg-prompt.txt not found"
-#             exit 1
-#           fi
-
-#           echo "✅ Context files validated successfully"
-
-#       # =====================================================
-#       # STEP 5 — Display UTG Prompt (Debug Visibility)
-#       # =====================================================
-#       - name: Display UTG prompt (LLM context)
-#         if: steps.changed-files.outputs.files != ''
-#         run: |
-#           echo "🤖 UTG Prompt Preview"
-#           echo "-----------------------------------"
-#           head -n 40 context/utg-prompt.txt
-#           echo "-----------------------------------"
-
-#       # =====================================================
-#       # STEP 6 — Checkout UTG Repository (FEATURE BRANCH)
-#       # =====================================================
-#       - name: Checkout UnitTestGenerationSystem
+#       # ============================================================
+#       # STEP 4 — Checkout UTG (FEATURE BRANCH)
+#       # ============================================================
+#       - name: Checkout UTG repository
 #         uses: actions/checkout@v4
 #         with:
 #           repository: prakalps/UnitTestGenerationSystem
 #           ref: feature/external-prompt-ingestion
-#           token: ${{ secrets.GH_TOKEN }}
 #           path: utg
+#           token: ${{ secrets.GITHUB_TOKEN }}
 
-#       # =====================================================
-#       # STEP 7 — Setup Node.js for UTG
-#       # =====================================================
-#       - name: Setup Node.js for UTG
+#       # ============================================================
+#       # STEP 5 — Setup Node
+#       # ============================================================
+#       - name: Setup Node.js
 #         uses: actions/setup-node@v4
 #         with:
-#           node-version: "18"
+#           node-version: 18
 
-#       # =====================================================
-#       # STEP 8 — Install UTG Dependencies
-#       # =====================================================
+#       # ============================================================
+#       # STEP 6 — Install UTG Dependencies
+#       # ============================================================
 #       - name: Install UTG dependencies
 #         working-directory: utg
-#         run: npm install --legacy-peer-deps
+#         run: npm install
 
-#       # =====================================================
-#       # STEP 9 — Run UTG in EXTERNAL PROMPT MODE (✅ FIXED)
-#       # =====================================================
+#       # ============================================================
+#       # STEP 7 — RUN UTG (🚨 NO npm start 🚨)
+#       # ============================================================
 #       - name: Run UTG with external prompt
 #         working-directory: utg
-#         env:
-#           UTG_MODE: external_prompt
-#           EXTERNAL_PROMPT_PATH: ../context/utg-prompt.txt
-#           SOURCE_REPO: ${{ github.repository }}
-#           SOURCE_PR_NUMBER: ${{ github.event.pull_request.number }}
-#           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
 #         run: |
 #           echo "🚀 Running UTG with external prompt"
-#           echo "Prompt path: $EXTERNAL_PROMPT_PATH"
+#           echo "Prompt path: ../context/utg-prompt.txt"
 
-#           npm run start
+#           node src/index.js \
+#             --mode external_prompt \
+#             --prompt ../context/utg-prompt.txt
 
+#       # ============================================================
+#       # STEP 8 — Upload Generated Tests
+#       # ============================================================
+#       - name: Upload generated tests
+#         if: success()
+#         uses: actions/upload-artifact@v4
+#         with:
+#           name: utg-generated-tests
+#           path: utg/generated-tests
 
 name: Call UTG External
 
 on:
   workflow_dispatch:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  actions: read
 
 jobs:
   run-utg:
+    name: Invoke Unit Test Generator (External Prompt)
     runs-on: ubuntu-latest
 
     steps:
       # ============================================================
-      # STEP 1 — Checkout React Repo
+      # STEP 1 — Checkout React Repository
       # ============================================================
       - name: Checkout React repository
         uses: actions/checkout@v4
 
       # ============================================================
-      # STEP 2 — Download Prompt Artifact
+      # STEP 2 — Download utg-prompt Artifact
+      # (Generated by react-component-extraction.yml)
       # ============================================================
       - name: Download UTG prompt
         uses: actions/download-artifact@v4
@@ -320,18 +411,24 @@ jobs:
           path: context
 
       # ============================================================
-      # STEP 3 — Verify Prompt
+      # STEP 3 — Validate Prompt File
       # ============================================================
-      - name: Verify prompt file
+      - name: Validate external prompt
         run: |
           echo "📄 Context contents:"
           ls -R context
-          test -f context/utg-prompt.txt
+
+          if [ ! -f context/utg-prompt.txt ]; then
+            echo "❌ utg-prompt.txt not found"
+            exit 1
+          fi
+
+          echo "✅ utg-prompt.txt detected"
 
       # ============================================================
-      # STEP 4 — Checkout UTG (FEATURE BRANCH)
+      # STEP 4 — Checkout UTG Repository (FEATURE BRANCH)
       # ============================================================
-      - name: Checkout UTG repository
+      - name: Checkout UnitTestGenerationSystem
         uses: actions/checkout@v4
         with:
           repository: prakalps/UnitTestGenerationSystem
@@ -340,7 +437,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
       # ============================================================
-      # STEP 5 — Setup Node
+      # STEP 5 — Setup Node.js
       # ============================================================
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -352,20 +449,31 @@ jobs:
       # ============================================================
       - name: Install UTG dependencies
         working-directory: utg
-        run: npm install
+        run: npm install --legacy-peer-deps
 
       # ============================================================
-      # STEP 7 — RUN UTG (🚨 NO npm start 🚨)
+      # STEP 7 — Run UTG (AUTO-DETECT ENTRY)
       # ============================================================
       - name: Run UTG with external prompt
         working-directory: utg
+        env:
+          UTG_MODE: external_prompt
+          EXTERNAL_PROMPT_PATH: ../context/utg-prompt.txt
+          SOURCE_REPO: ${{ github.repository }}
+          SOURCE_PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
           echo "🚀 Running UTG with external prompt"
-          echo "Prompt path: ../context/utg-prompt.txt"
+          echo "Prompt path: $EXTERNAL_PROMPT_PATH"
 
-          node src/index.js \
-            --mode external_prompt \
-            --prompt ../context/utg-prompt.txt
+          echo "📦 Available npm scripts:"
+          npm run || true
+
+          # Prefer generate script if present
+          if npm run | grep -q "generate"; then
+            npm run generate
+          else
+            node .
+          fi
 
       # ============================================================
       # STEP 8 — Upload Generated Tests
